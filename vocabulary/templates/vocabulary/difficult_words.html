@@ -87,6 +87,8 @@
                         <div class="word-english">{{ word.word.english }}</div>
                         <div class="word-korean">{{ word.word.korean }}</div>
                         <div class="text-muted mt-2">틀린 횟수: {{ word.wrong_count }}</div>
+                        <button class="btn btn-outline-info btn-sm mt-2 association-btn" data-english="{{ word.word.english }}" data-korean="{{ word.word.korean }}">도움!</button>
+                        <div class="association-result mt-2" style="display:none;"></div>
                     </div>
                 </div>
                 {% endfor %}
@@ -107,4 +109,44 @@
         </a>
     </div>
 </div>
-{% endblock %} 
+
+{% endblock %}  <!-- ← content block 닫기 -->
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.association-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const english = btn.getAttribute('data-english');
+            const korean = btn.getAttribute('data-korean');
+            const resultDiv = btn.nextElementSibling;
+            btn.disabled = true;
+            btn.textContent = '불러오는 중...';
+            fetch('/api/association/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word: english, meaning: korean })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.association) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = '<strong>경선식 연상 암기법:</strong><br>' + data.association;
+                } else {
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = '<span class="text-danger">오류: ' + (data.error || '알 수 없는 오류') + '</span>';
+                }
+            })
+            .catch(err => {
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = '<span class="text-danger">오류: ' + err + '</span>';
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = '도움!';
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

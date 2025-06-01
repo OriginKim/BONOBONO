@@ -23,4 +23,5 @@ urlpatterns = [
     path('quiz/<int:quiz_id>/', views.quiz_detail, name='quiz_detail'),
     path('quiz/<int:quiz_id>/take/', views.take_quiz, name='take_quiz'),
     path('quiz/<int:quiz_id>/student-results/', views.quiz_student_results, name='quiz_student_results'),
+    path('api/association/', views.generate_association, name='generate_association'),
 ] 

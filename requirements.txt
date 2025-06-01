@@ -1,4 +1,11 @@
-Django==5.2.1
+Django>=5.0
+openai>=1.0.0
+python-dotenv
+
+requests
+
 mysqlclient>=2.2.0
 gtts>=2.5.1
+pip install sentencepiece
+brew install cmake
 # C 라이브러리 연동용 (ctypes는 표준 라이브러리이므로 별도 설치 불필요) 

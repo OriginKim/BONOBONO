@@ -12,9 +12,23 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse
 import logging
+import requests
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.conf import settings
+import json
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
+import traceback
+import openai
+import os
+from dotenv import load_dotenv
 
 # 로거 설정
 logger = logging.getLogger(__name__)
+
+# .env 파일을 자동으로 불러오도록 추가
+load_dotenv()
 
 def index(request):
     if request.user.is_authenticated:
@@ -467,6 +481,40 @@ def difficult_words(request):
         return render(request, 'vocabulary/difficult_words.html', context)
         
     except Exception as e:
-        print(f"오류 발생: {str(e)}")
+        traceback.print_exc()  # 콘솔에 에러 전체 출력
         messages.error(request, f'오류가 발생했습니다: {str(e)}')
         return redirect('vocabulary:index')
+
+@csrf_exempt
+@require_POST
+def generate_association(request):
+    try:
+        data = json.loads(request.body)
+        word = data.get('word') or data.get('english')
+        meaning = data.get('meaning') or data.get('korean')
+        if not word or not meaning:
+            return JsonResponse({'success': False, 'error': '단어와 뜻을 모두 입력해야 합니다.'}, status=400)
+
+        # OpenAI GPT-3.5 Turbo API 호출 (openai>=1.0.0 방식)
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return JsonResponse({'success': False, 'error': 'OPENAI_API_KEY 환경변수가 설정되어 있지 않습니다.'}, status=500)
+        client = openai.OpenAI(api_key=api_key)
+        prompt = f"단어: {word}\n뜻: {meaning}\n경선식 영어 암기법 예시) eligible: 엘리(eligible)베이터를 탈 자격이 있는 사람만 올라갈 수 있다!\n위와 같이, 이 단어를 쉽게 외울 수 있는 경선식 연상 암기법(재미있는 스토리, 이미지, 연상법 등)을 2~3문장으로 설명해줘."
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "너는 경선식 영어 암기법을 잘 만들어주는 선생님이야."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=200,
+            temperature=0.7,
+            top_p=0.8
+        )
+        association = response.choices[0].message.content.strip()
+        return JsonResponse({'success': True, 'association': association})
+    except Exception as e:
+        import sys
+        import traceback
+        traceback.print_exc(file=sys.stdout)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

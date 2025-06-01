@@ -133,3 +133,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # C Library settings
 C_LIBRARY_PATH = os.path.join(BASE_DIR, 'data_structures/src/libword_learning.so')
+
+# KOGPT API Settings
+KOGPT_API_KEY = '1354e6239b20b2d8e55504acdf975d66'
+KOGPT_API_URL = 'https://api.kakaobrain.com/v1/inference/kogpt/generation'
