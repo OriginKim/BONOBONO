@@ -1,0 +1,46 @@
+{% extends 'vocabulary/base.html' %}
+
+{% block title %}오답 노트 - 영어 단어 학습{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-center">오답 노트</h3>
+            </div>
+            <div class="card-body">
+                {% if wrong_words %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>영어 단어</th>
+                                    <th>한글 뜻</th>
+                                    <th>틀린 횟수</th>
+                                    <th>마지막 틀린 날짜</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for word in wrong_words %}
+                                    <tr>
+                                        <td>{{ word.word.english }}</td>
+                                        <td>{{ word.word.korean }}</td>
+                                        <td>{{ word.wrong_count }}</td>
+                                        <td>{{ word.last_wrong_date|date:"Y-m-d H:i" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center">
+                        <p class="lead">아직 틀린 단어가 없습니다.</p>
+                        <a href="{% url 'vocabulary:take_quiz' %}" class="btn btn-primary">퀴즈 풀기</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

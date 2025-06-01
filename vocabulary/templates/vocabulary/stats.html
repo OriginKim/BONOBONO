@@ -1,0 +1,146 @@
+{% extends 'vocabulary/base.html' %}
+
+{% block title %}학습 통계 - 영어 단어 학습{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        margin-bottom: 1.5rem;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 2rem;
+    }
+    .stats-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #0d6efd;
+    }
+    .stats-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- 요약 통계 -->
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">오늘의 학습</h5>
+                    <div class="stats-value">{{ today_stats.total_words }}</div>
+                    <div class="stats-label">학습한 단어 수</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">정답률</h5>
+                    <div class="stats-value">{{ today_stats.accuracy_rate }}%</div>
+                    <div class="stats-label">오늘의 정답률</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">학습 시간</h5>
+                    <div class="stats-value">{{ today_stats.study_time }}</div>
+                    <div class="stats-label">분</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 학습 추이 그래프 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">학습 추이</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="learningChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 어려운 단어 목록 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">어려운 단어 TOP 10</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>영어 단어</th>
+                                    <th>한글 뜻</th>
+                                    <th>정답률</th>
+                                    <th>틀린 횟수</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for word in difficult_words %}
+                                <tr>
+                                    <td>{{ word.word.english }}</td>
+                                    <td>{{ word.word.korean }}</td>
+                                    <td>{{ word.accuracy_rate }}%</td>
+                                    <td>{{ word.wrong_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('learningChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ dates|safe }},
+            datasets: [{
+                label: '학습한 단어 수',
+                data: {{ word_counts|safe }},
+                borderColor: '#0d6efd',
+                tension: 0.1
+            }, {
+                label: '정답률',
+                data: {{ accuracy_rates|safe }},
+                borderColor: '#198754',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %} 

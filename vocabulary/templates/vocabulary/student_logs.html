@@ -1,0 +1,112 @@
+{% extends 'vocabulary/base.html' %}
+
+{% block title %}학생 로그 - 영어 단어 학습{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .log-card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 15px;
+    }
+    
+    .score-badge {
+        font-size: 1.2rem;
+        padding: 5px 15px;
+        border-radius: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">학생 학습 로그</h1>
+
+    <!-- 퀴즈별 통계 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">퀴즈별 학생 성적</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>퀴즈 제목</th>
+                            <th>참여 학생 수</th>
+                            <th>평균 정답률</th>
+                            <th>생성일</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for quiz in quiz_stats %}
+                        <tr>
+                            <td>{{ quiz.title }}</td>
+                            <td>{{ quiz.total_students }}명</td>
+                            <td>{{ quiz.avg_score|floatformat:1 }}%</td>
+                            <td>{{ quiz.created_at|date:"Y-m-d" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">아직 퀴즈가 없습니다.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 최근 활동 로그 -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="h5 mb-0">최근 학생 활동</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>학생</th>
+                            <th>퀴즈</th>
+                            <th>단어</th>
+                            <th>정답 여부</th>
+                            <th>시간</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_logs %}
+                        <tr>
+                            <td>{{ log.student.username }}</td>
+                            <td>{{ log.quiz.title }}</td>
+                            <td>{{ log.word.english }}</td>
+                            <td>
+                                {% if log.is_correct %}
+                                <span class="badge bg-success">정답</span>
+                                {% else %}
+                                <span class="badge bg-danger">오답</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">아직 활동 로그가 없습니다.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

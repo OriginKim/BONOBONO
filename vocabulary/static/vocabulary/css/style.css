@@ -1,0 +1,93 @@
+/* 전체 스타일 */
+body {
+    background-color: #f8f9fa;
+}
+
+/* 네비게이션 바 */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+/* 카드 스타일 */
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+/* 퀴즈 스타일 */
+.quiz-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.word-card {
+    margin-bottom: 2rem;
+    border: 1px solid #e9ecef;
+}
+
+.answer-input {
+    font-size: 1.2rem;
+    padding: 0.75rem;
+}
+
+.timer {
+    font-size: 1.5rem;
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* 버튼 스타일 */
+.btn-primary {
+    background-color: #0d6efd;
+    border: none;
+    padding: 0.75rem 1.5rem;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+}
+
+/* 폼 스타일 */
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13,110,253,.25);
+}
+
+/* 알림 메시지 */
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+/* 테이블 스타일 */
+.table {
+    background-color: white;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .answer-input {
+        font-size: 1rem;
+    }
+} 

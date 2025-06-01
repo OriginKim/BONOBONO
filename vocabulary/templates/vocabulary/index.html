@@ -1,0 +1,128 @@
+{% extends 'vocabulary/base.html' %}
+{% load static %}
+
+{% block title %}영어 단어 학습 - 메인{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+        color: white;
+        padding: 100px 0;
+        margin-bottom: 50px;
+    }
+    
+    .feature-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+        margin-bottom: 30px;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+        color: #000DFF;
+    }
+    
+    .cta-section {
+        background-color: #f8f9fa;
+        padding: 80px 0;
+        text-align: center;
+    }
+    
+    .btn-custom {
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: 600;
+        margin: 10px;
+    }
+    
+    .btn-primary-custom {
+        background-color: #000DFF;
+        border-color: #000DFF;
+    }
+    
+    .btn-outline-custom {
+        border-color: #000DFF;
+        color: #000DFF;
+    }
+    
+    .btn-outline-custom:hover {
+        background-color: #000DFF;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 히어로 섹션 -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">영어 단어 학습의 새로운 패러다임</h1>
+                <p class="lead mb-4">효율적인 단어 학습과 퀴즈를 통한 실력 향상. 지금 시작하세요!</p>
+                <div class="d-flex gap-3">
+                    <a href="{% url 'vocabulary:login' %}" class="btn btn-light btn-lg btn-custom">로그인</a>
+                    <a href="{% url 'vocabulary:register' %}" class="btn btn-outline-light btn-lg btn-custom">회원가입</a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <img src="{% static 'vocabulary/images/hero-image.svg' %}" alt="학습 이미지" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 주요 기능 섹션 -->
+<section class="container mb-5">
+    <h2 class="text-center mb-5">주요 기능</h2>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card feature-card h-100">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-book feature-icon"></i>
+                    <h3 class="card-title h4">체계적인 단어 학습</h3>
+                    <p class="card-text">영어 단어를 체계적으로 학습하고 관리할 수 있습니다.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card h-100">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-tasks feature-icon"></i>
+                    <h3 class="card-title h4">맞춤형 퀴즈</h3>
+                    <p class="card-text">선생님이 만든 퀴즈로 학습한 단어를 복습하고 실력을 향상시킬 수 있습니다.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card h-100">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-chart-line feature-icon"></i>
+                    <h3 class="card-title h4">학습 통계</h3>
+                    <p class="card-text">학습 진행 상황과 성취도를 한눈에 확인할 수 있습니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA 섹션 -->
+<section class="cta-section">
+    <div class="container">
+        <h2 class="mb-4">지금 바로 시작하세요!</h2>
+        <p class="lead mb-4">효율적인 영어 단어 학습을 위한 최고의 선택</p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'vocabulary:register' %}" class="btn btn-primary btn-lg btn-custom btn-primary-custom">무료로 시작하기</a>
+            <a href="{% url 'vocabulary:login' %}" class="btn btn-outline-primary btn-lg btn-custom btn-outline-custom">로그인</a>
+        </div>
+    </div>
+</section>
+{% endblock %} 

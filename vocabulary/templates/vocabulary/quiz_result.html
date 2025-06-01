@@ -1,0 +1,67 @@
+{% extends 'vocabulary/base.html' %}
+
+{% block title %}퀴즈 결과 - 영어 단어 학습{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center mb-0">{{ quiz.title }} - 결과</h3>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h4>점수: {{ score }}점</h4>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar {% if score >= 80 %}bg-success{% elif score >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ score }}%">
+                                {{ score }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>영어 단어</th>
+                                    <th>정답</th>
+                                    <th>제출한 답</th>
+                                    <th>결과</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for answer in answers %}
+                                <tr>
+                                    <td>{{ answer.word.english }}</td>
+                                    <td>{{ answer.word.korean }}</td>
+                                    <td>{{ answer.answer }}</td>
+                                    <td>
+                                        {% if answer.is_correct %}
+                                            <span class="badge bg-success">정답</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">오답</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'vocabulary:wrong_words' %}" class="btn btn-primary">
+                            오답 노트 보기
+                        </a>
+                        <a href="{% url 'vocabulary:take_quiz' %}" class="btn btn-outline-primary">
+                            다른 퀴즈 풀기
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

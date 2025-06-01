@@ -1,0 +1,108 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}영어 단어 학습{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{% static 'vocabulary/css/style.css' %}" rel="stylesheet">
+    <style>
+        .navbar {
+            margin-bottom: 2rem;
+        }
+        .content {
+            padding: 2rem;
+        }
+        .footer {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'vocabulary:index' %}">
+                <i class="fas fa-graduation-cap me-2"></i>영어 단어 학습
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        {% if user.is_staff %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'vocabulary:create_quiz' %}">
+                                    <i class="fas fa-plus-circle me-1"></i>퀴즈 만들기
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'vocabulary:student_logs' %}">
+                                    <i class="fas fa-chart-bar me-1"></i>학생 로그
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'vocabulary:index' %}">
+                                    <i class="fas fa-pencil-alt me-1"></i>퀴즈 목록
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'vocabulary:wrong_words' %}">
+                                    <i class="fas fa-bookmark me-1"></i>오답 노트
+                                </a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'vocabulary:logout' %}">
+                                <i class="fas fa-sign-out-alt me-1"></i>로그아웃
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'vocabulary:login' %}">
+                                <i class="fas fa-sign-in-alt me-1"></i>로그인
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'vocabulary:register' %}">
+                                <i class="fas fa-user-plus me-1"></i>회원가입
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-light py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2024 영어 단어 학습. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'vocabulary/js/speech.js' %}"></script>
+    <script src="{% static 'vocabulary/js/quiz.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

@@ -1,0 +1,101 @@
+{% extends 'vocabulary/base.html' %}
+
+{% block title %}선생님 메인 - 영어 단어 학습{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quiz-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+        margin-bottom: 30px;
+    }
+    
+    .quiz-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .quiz-icon {
+        font-size: 2rem;
+        color: #000DFF;
+        margin-bottom: 15px;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stats-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+    
+    .stats-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- 환영 메시지 -->
+    <div class="text-center mb-5">
+        <h1 class="display-4">안녕하세요, {{ user.username }}선생님!</h1>
+        <p class="lead">학생들의 영어 단어 학습을 도와주세요.</p>
+    </div>
+
+    <!-- 퀴즈 생성 버튼 -->
+    <div class="text-center mb-5">
+        <a href="{% url 'vocabulary:create_quiz' %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus-circle me-2"></i>새 퀴즈 만들기
+        </a>
+    </div>
+
+    <!-- 퀴즈 목록 -->
+    <h2 class="mb-4">내가 만든 퀴즈</h2>
+    <div class="row">
+        {% for quiz in quizzes %}
+        <div class="col-md-4">
+            <div class="card quiz-card h-100">
+                <div class="card-body p-4">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-tasks quiz-icon"></i>
+                        <h3 class="card-title h4">{{ quiz.title }}</h3>
+                    </div>
+                    <p class="card-text">{{ quiz.description }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">
+                            <i class="fas fa-list-ol me-1"></i>단어 수: {{ quiz.quizword_set.count }}개
+                        </span>
+                        <span class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>{{ quiz.created_at|date:"Y-m-d" }}
+                        </span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'vocabulary:quiz_detail' quiz.id %}" class="btn btn-outline-primary">
+                            <i class="fas fa-eye me-1"></i>상세보기
+                        </a>
+                        <a href="{% url 'vocabulary:student_logs' %}" class="btn btn-outline-success">
+                            <i class="fas fa-chart-bar me-1"></i>학생 로그
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                아직 만든 퀴즈가 없습니다. 새로운 퀴즈를 만들어보세요!
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

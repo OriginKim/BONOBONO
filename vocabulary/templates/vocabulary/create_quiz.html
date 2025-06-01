@@ -1,0 +1,189 @@
+{% extends 'vocabulary/base.html' %}
+
+{% block title %}퀴즈 만들기{% endblock %}
+
+{% block extra_css %}
+<style>
+    .word-list {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .word-item {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    .word-item:hover {
+        background-color: #f8f9fa;
+    }
+    .selected-words {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .selected-word-item {
+        padding: 5px;
+        margin: 2px 0;
+        background-color: #e9ecef;
+        border-radius: 4px;
+    }
+    .time-settings {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">퀴즈 만들기</h1>
+    <form method="post" id="quizForm">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-8">
+                <div class="form-group mb-3">
+                    <label for="title">퀴즈 제목</label>
+                    <input type="text" class="form-control" id="title" name="title" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="description">설명</label>
+                    <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                </div>
+                <!-- 시간 설정 섹션 -->
+                <div class="time-settings">
+                    <h4 class="mb-3">시간 설정</h4>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="active_from" class="form-label">퀴즈 시작 시간</label>
+                                <input type="datetime-local" class="form-control" id="active_from" name="active_from" required>
+                                <div class="form-text">이 시간부터 퀴즈를 풀 수 있습니다.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="active_until" class="form-label">퀴즈 종료 시간</label>
+                                <input type="datetime-local" class="form-control" id="active_until" name="active_until" required>
+                                <div class="form-text">이 시간 이후에는 퀴즈를 풀 수 없습니다.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="time_limit" class="form-label">퀴즈 제한 시간 (초)</label>
+                                <input type="number" class="form-control" id="time_limit" name="time_limit" min="30" max="3600" value="60" required>
+                                <div class="form-text">30초에서 3600초(1시간) 사이로 설정해주세요.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="wordSearch">단어 검색</label>
+                    <input type="text" class="form-control" id="wordSearch" placeholder="영어 또는 한글 단어를 입력하세요">
+                </div>
+                <div class="word-list border rounded p-3">
+                    {% for word in words %}
+                    <div class="word-item" data-english="{{ word.english }}" data-korean="{{ word.korean }}">
+                        <div class="form-check">
+                            <input class="form-check-input word-checkbox" type="checkbox" name="words" value="{{ word.id }}" id="word{{ word.id }}">
+                            <label class="form-check-label" for="word{{ word.id }}">
+                                <strong>{{ word.english }}</strong> - {{ word.korean }}
+                                {% if word.part_of_speech %}
+                                <small class="text-muted">({{ word.part_of_speech }})</small>
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">선택된 단어</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="selected-words" id="selectedWords">
+                            <p class="text-muted">선택된 단어가 여기에 표시됩니다.</p>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">퀴즈 생성</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const wordSearch = document.getElementById('wordSearch');
+    const wordItems = document.querySelectorAll('.word-item');
+    const selectedWords = document.getElementById('selectedWords');
+    const wordCheckboxes = document.querySelectorAll('.word-checkbox');
+
+    // 단어 검색 기능
+    wordSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        wordItems.forEach(item => {
+            const english = item.dataset.english.toLowerCase();
+            const korean = item.dataset.korean.toLowerCase();
+            if (english.includes(searchTerm) || korean.includes(searchTerm)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
+    // 선택된 단어 표시
+    function updateSelectedWords() {
+        const selected = Array.from(wordCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => {
+                const item = cb.closest('.word-item');
+                return {
+                    id: cb.value,
+                    english: item.dataset.english,
+                    korean: item.dataset.korean
+                };
+            });
+
+        if (selected.length === 0) {
+            selectedWords.innerHTML = '<p class="text-muted">선택된 단어가 여기에 표시됩니다.</p>';
+            return;
+        }
+
+        selectedWords.innerHTML = selected.map(word => `
+            <div class="selected-word-item">
+                <strong>${word.english}</strong> - ${word.korean}
+            </div>
+        `).join('');
+    }
+
+    // 체크박스 변경 이벤트
+    wordCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedWords);
+    });
+
+    // 시작/종료 시간의 기본값 설정
+    const now = new Date();
+    const weekLater = new Date();
+    weekLater.setDate(now.getDate() + 7);
+
+    function toDatetimeLocal(dt) {
+        const year = dt.getFullYear();
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const day = String(dt.getDate()).padStart(2, '0');
+        const hours = String(dt.getHours()).padStart(2, '0');
+        const minutes = String(dt.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    document.getElementById('active_from').value = toDatetimeLocal(now);
+    document.getElementById('active_until').value = toDatetimeLocal(weekLater);
+});
+</script>
+{% endblock %}

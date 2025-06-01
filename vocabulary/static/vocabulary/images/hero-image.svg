@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+    <style>
+        .book { fill: #ffffff; }
+        .text { fill: #000DFF; }
+        .highlight { fill: #6B73FF; }
+    </style>
+    
+    <!-- 배경 원 -->
+    <circle cx="300" cy="200" r="180" fill="#ffffff" opacity="0.1"/>
+    
+    <!-- 책 아이콘 -->
+    <path class="book" d="M200 100 L400 100 L400 300 L200 300 Z" opacity="0.9"/>
+    <path class="highlight" d="M200 100 L400 100 L400 120 L200 120 Z" opacity="0.7"/>
+    <path class="highlight" d="M200 140 L400 140 L400 160 L200 160 Z" opacity="0.7"/>
+    <path class="highlight" d="M200 180 L400 180 L400 200 L200 200 Z" opacity="0.7"/>
+    
+    <!-- 텍스트 요소 -->
+    <text x="300" y="250" class="text" font-family="Arial" font-size="24" text-anchor="middle">Learn English</text>
+    <text x="300" y="280" class="text" font-family="Arial" font-size="24" text-anchor="middle">With Us</text>
+</svg> 
