@@ -18,6 +18,9 @@ urlpatterns = [
     path('student/quiz/<int:quiz_id>/take/', views.take_quiz, name='take_quiz'),
     path('student/wrong-words/', views.wrong_words, name='wrong_words'),
     path('student/wrong-words/review/', views.review_wrong_words, name='review_wrong_words'),
-    path('review-wrong-words/', views.review_wrong_words, name='review_wrong_words'),
-    path('stats/', views.stats_view, name='stats'),
+    path('student/difficult-words/', views.difficult_words, name='difficult_words'),
+    path('student/stats/', views.stats_view, name='stats'),
+    path('quiz/<int:quiz_id>/', views.quiz_detail, name='quiz_detail'),
+    path('quiz/<int:quiz_id>/take/', views.take_quiz, name='take_quiz'),
+    path('quiz/<int:quiz_id>/student-results/', views.quiz_student_results, name='quiz_student_results'),
 ] 

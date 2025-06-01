@@ -5,11 +5,16 @@ from django.contrib.auth.models import User
 from .models import Word, Quiz, QuizWord, StudentAnswer, WrongWord, LearningStats, WordStats, StudentLog
 from .c_library import WordLearningLibrary, Word as CWord
 from datetime import datetime, timedelta
-from django.db.models import Count, Avg
+from django.db.models import Count, Avg, FloatField
 from django.db.models.functions import TruncDate
 from ctypes import byref
 from django.contrib import messages
 from django.utils import timezone
+from django.http import JsonResponse
+import logging
+
+# 로거 설정
+logger = logging.getLogger(__name__)
 
 def index(request):
     if request.user.is_authenticated:
@@ -17,7 +22,11 @@ def index(request):
             quizzes = Quiz.objects.filter(created_by=request.user)
             return render(request, 'vocabulary/teacher_index.html', {'quizzes': quizzes})
         else:  # 학생
-            available_quizzes = Quiz.objects.all()
+            now = timezone.now()
+            available_quizzes = Quiz.objects.filter(
+                active_from__lte=now,  # 시작 시간이 현재보다 이전
+                active_until__gt=now   # 종료 시간이 현재보다 이후
+            )
             
             # 오늘의 통계
             today = datetime.now().date()
@@ -37,8 +46,20 @@ def index(request):
             for quiz in available_quizzes:
                 quiz.word_count = QuizWord.objects.filter(quiz=quiz).count()
             
+            # 아직 시작하지 않은 퀴즈
+            upcoming_quizzes = Quiz.objects.filter(
+                active_from__gt=now
+            ).order_by('active_from')
+            
+            # 이미 종료된 퀴즈
+            expired_quizzes = Quiz.objects.filter(
+                active_until__lte=now
+            ).order_by('-active_until')
+            
             return render(request, 'vocabulary/student_index.html', {
                 'quizzes': available_quizzes,
+                'upcoming_quizzes': upcoming_quizzes,
+                'expired_quizzes': expired_quizzes,
                 'today_stats': today_stats
             })
     return render(request, 'vocabulary/index.html')
@@ -176,6 +197,15 @@ def take_quiz(request, quiz_id):
         return redirect('vocabulary:index')
     
     quiz = get_object_or_404(Quiz, id=quiz_id)
+    now = timezone.now()
+    
+    # 퀴즈 시간 체크
+    if now < quiz.active_from:
+        messages.warning(request, f'이 퀴즈는 {quiz.active_from.strftime("%Y년 %m월 %d일 %H시 %M분")}부터 풀 수 있습니다.')
+        return redirect('vocabulary:index')
+    elif now > quiz.active_until:
+        messages.warning(request, f'이 퀴즈는 {quiz.active_until.strftime("%Y년 %m월 %d일 %H시 %M분")}에 종료되었습니다.')
+        return redirect('vocabulary:index')
     
     if request.method == 'POST':
         # Stack을 사용하여 오답 저장
@@ -183,6 +213,10 @@ def take_quiz(request, quiz_id):
         stack = library.create_stack()
         
         quiz_words = QuizWord.objects.filter(quiz=quiz).select_related('word')
+        answers = []
+        correct_count = 0
+        total_count = 0
+        
         for quiz_word in quiz_words:
             answer = request.POST.get(f'answer_{quiz_word.word.id}')
             is_correct = answer.lower() == quiz_word.word.korean.lower()
@@ -197,8 +231,26 @@ def take_quiz(request, quiz_id):
             
             if not is_correct:
                 WrongWord.objects.get_or_create(student=request.user, word=quiz_word.word)
+            
+            answers.append({
+                'word': quiz_word.word,
+                'user_answer': answer,
+                'is_correct': is_correct
+            })
+            
+            total_count += 1
+            if is_correct:
+                correct_count += 1
         
-        return redirect('vocabulary:wrong_words')
+        score = (correct_count / total_count) * 100 if total_count > 0 else 0
+        
+        return render(request, 'vocabulary/quiz_result.html', {
+            'quiz': quiz,
+            'answers': answers,
+            'score': round(score, 1),
+            'correct_count': correct_count,
+            'total_count': total_count
+        })
     
     # 퀴즈의 단어들을 순서대로 가져옵니다
     quiz_words = QuizWord.objects.filter(quiz=quiz).select_related('word').order_by('order')
@@ -229,7 +281,7 @@ def review_wrong_words(request):
     wrong_words = WrongWord.objects.filter(student=request.user)
     for wrong_word in wrong_words:
         word = wrong_word.word
-        library.lib.insertWord(circular_list, word.word.encode(), word.meaning.encode())
+        library.lib.insertWord(circular_list, word.english.encode('utf-8'), word.korean.encode('utf-8'))
     
     return render(request, 'vocabulary/review_wrong_words.html', {'wrong_words': wrong_words})
 
@@ -291,7 +343,7 @@ def student_logs(request):
     # 퀴즈별 학생 성적 통계
     quiz_stats = Quiz.objects.filter(created_by=request.user).annotate(
         total_students=Count('studentanswer__student', distinct=True),
-        avg_score=Avg('studentanswer__is_correct')
+        avg_score=Avg('studentanswer__is_correct', output_field=FloatField()) * 100  # 백분율로 변환
     ).order_by('-created_at')
     
     # 최근 학생 활동 로그
@@ -304,3 +356,117 @@ def student_logs(request):
         'recent_logs': recent_logs,
     }
     return render(request, 'vocabulary/student_logs.html', context)
+
+@login_required
+def quiz_student_results(request, quiz_id):
+    if not request.user.is_staff:
+        return JsonResponse({'error': '접근 권한이 없습니다.'}, status=403)
+    
+    quiz = get_object_or_404(Quiz, id=quiz_id, created_by=request.user)
+    
+    # 학생별 답변 데이터 수집
+    student_answers = StudentAnswer.objects.filter(
+        quiz=quiz
+    ).select_related('student', 'word').order_by('student__username', 'created_at')
+    
+    # 학생별로 데이터 그룹화
+    student_data = {}
+    for answer in student_answers:
+        if answer.student.username not in student_data:
+            student_data[answer.student.username] = {
+                'username': answer.student.username,
+                'answers': [],
+                'correct_count': 0,
+                'total_count': 0
+            }
+        
+        student_data[answer.student.username]['answers'].append({
+            'word': answer.word.english,
+            'answer': answer.answer,
+            'is_correct': answer.is_correct
+        })
+        
+        student_data[answer.student.username]['total_count'] += 1
+        if answer.is_correct:
+            student_data[answer.student.username]['correct_count'] += 1
+    
+    # 점수 계산 및 데이터 정리
+    students = []
+    for username, data in student_data.items():
+        score = (data['correct_count'] / data['total_count']) * 100 if data['total_count'] > 0 else 0
+        students.append({
+            'username': username,
+            'score': round(score, 1),
+            'answers': data['answers']
+        })
+    
+    # 점수순으로 정렬
+    students.sort(key=lambda x: x['score'], reverse=True)
+    
+    return JsonResponse({
+        'quiz_title': quiz.title,
+        'students': students
+    })
+
+@login_required
+def difficult_words(request):
+    if request.user.is_staff:
+        return redirect('vocabulary:index')
+    
+    try:
+        print("자주 틀리는 단어 페이지 접속 시작")
+        
+        # 학생이 틀린 단어들을 가져와서 틀린 횟수 계산
+        wrong_words = WrongWord.objects.filter(student=request.user)
+        print(f"틀린 단어 수: {wrong_words.count()}")
+        
+        # 틀린 횟수 계산
+        mistake_counts = {}
+        for wrong_word in wrong_words:
+            english = wrong_word.word.english
+            if english not in mistake_counts:
+                mistake_counts[english] = 0
+            mistake_counts[english] += 1
+        
+        # 단어들을 리스트로 변환
+        words = []
+        for wrong_word in wrong_words:
+            word_dict = {
+                'word': {
+                    'english': wrong_word.word.english,
+                    'korean': wrong_word.word.korean
+                },
+                'wrong_count': mistake_counts[wrong_word.word.english]
+            }
+            # 중복 제거
+            if word_dict not in words:
+                words.append(word_dict)
+        
+        print(f"총 단어 수: {len(words)}")
+        
+        # 틀린 횟수별로 그룹화
+        difficulty_groups = {}
+        for word in words:
+            count = word['wrong_count']
+            if count not in difficulty_groups:
+                difficulty_groups[count] = []
+            if word not in difficulty_groups[count]:
+                difficulty_groups[count].append(word)
+        
+        # 틀린 횟수가 많은 순서대로 정렬
+        sorted_groups = sorted(difficulty_groups.items(), reverse=True)
+        print(f"그룹화된 단어 수: {len(sorted_groups)}")
+        print("그룹화된 데이터:", sorted_groups)
+        
+        context = {
+            'difficulty_groups': sorted_groups,
+            'total_wrong_words': len(words)
+        }
+        
+        print("페이지 렌더링 시작")
+        return render(request, 'vocabulary/difficult_words.html', context)
+        
+    except Exception as e:
+        print(f"오류 발생: {str(e)}")
+        messages.error(request, f'오류가 발생했습니다: {str(e)}')
+        return redirect('vocabulary:index')

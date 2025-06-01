@@ -39,6 +39,37 @@
         font-size: 1.5rem;
         font-weight: bold;
     }
+
+    .quiz-status {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .status-upcoming {
+        background-color: #ffd700;
+        color: #000;
+    }
+
+    .status-active {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .status-expired {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .quiz-time {
+        font-size: 0.9rem;
+        color: #666;
+        margin-top: 5px;
+    }
 </style>
 {% endblock %}
 
@@ -81,13 +112,14 @@
         </div>
     </div>
 
-    <!-- 퀴즈 목록 -->
+    <!-- 진행중인 퀴즈 -->
     <h2 class="mb-4">풀 수 있는 퀴즈</h2>
     <div class="row">
         {% for quiz in quizzes %}
         <div class="col-md-6">
             <div class="card quiz-card">
                 <div class="card-body">
+                    <span class="quiz-status status-active">진행중</span>
                     <h3 class="card-title h5 mb-3">{{ quiz.title }}</h3>
                     <p class="card-text text-muted mb-3">{{ quiz.description }}</p>
                     <div class="d-flex justify-content-between align-items-center">
@@ -95,8 +127,8 @@
                             <p class="mb-1">
                                 <i class="fas fa-list-ol me-1"></i>단어 수: {{ quiz.quizword_set.count }}개
                             </p>
-                            <p class="mb-0">
-                                <i class="fas fa-calendar me-1"></i>생성일: {{ quiz.created_at|date:"Y-m-d" }}
+                            <p class="mb-0 quiz-time">
+                                <i class="fas fa-clock me-1"></i>종료: {{ quiz.active_until|date:"Y-m-d H:i" }}
                             </p>
                         </div>
                         <a href="{% url 'vocabulary:take_quiz' quiz.id %}" class="btn btn-primary">
@@ -110,19 +142,103 @@
         <div class="col-12">
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
-                아직 풀 수 있는 퀴즈가 없습니다.
+                현재 풀 수 있는 퀴즈가 없습니다.
             </div>
         </div>
         {% endfor %}
     </div>
 
+    <!-- 예정된 퀴즈 -->
+    {% if upcoming_quizzes %}
+    <h2 class="mb-4 mt-5">예정된 퀴즈</h2>
+    <div class="row">
+        {% for quiz in upcoming_quizzes %}
+        <div class="col-md-6">
+            <div class="card quiz-card">
+                <div class="card-body">
+                    <span class="quiz-status status-upcoming">예정</span>
+                    <h3 class="card-title h5 mb-3">{{ quiz.title }}</h3>
+                    <p class="card-text text-muted mb-3">{{ quiz.description }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-1">
+                                <i class="fas fa-list-ol me-1"></i>단어 수: {{ quiz.quizword_set.count }}개
+                            </p>
+                            <p class="mb-0 quiz-time">
+                                <i class="fas fa-clock me-1"></i>시작: {{ quiz.active_from|date:"Y-m-d H:i" }}
+                            </p>
+                        </div>
+                        <button class="btn btn-secondary" disabled>
+                            <i class="fas fa-clock me-1"></i>시작 대기중
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 종료된 퀴즈 -->
+    {% if expired_quizzes %}
+    <h2 class="mb-4 mt-5">종료된 퀴즈</h2>
+    <div class="row">
+        {% for quiz in expired_quizzes %}
+        <div class="col-md-6">
+            <div class="card quiz-card">
+                <div class="card-body">
+                    <span class="quiz-status status-expired">종료</span>
+                    <h3 class="card-title h5 mb-3">{{ quiz.title }}</h3>
+                    <p class="card-text text-muted mb-3">{{ quiz.description }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-1">
+                                <i class="fas fa-list-ol me-1"></i>단어 수: {{ quiz.quizword_set.count }}개
+                            </p>
+                            <p class="mb-0 quiz-time">
+                                <i class="fas fa-clock me-1"></i>종료: {{ quiz.active_until|date:"Y-m-d H:i" }}
+                            </p>
+                        </div>
+                        <button class="btn btn-secondary" disabled>
+                            <i class="fas fa-times me-1"></i>종료됨
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- 오답 노트 -->
     <div class="text-center mt-5">
-        <h2 class="mb-4">오답 노트</h2>
-        <p class="lead mb-4">틀린 단어들을 복습하고 실력을 향상시켜보세요.</p>
-        <a href="{% url 'vocabulary:wrong_words' %}" class="btn btn-primary btn-lg">
-            <i class="fas fa-bookmark me-2"></i>오답 노트 보기
-        </a>
+        <h2 class="mb-4">학습 관리</h2>
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <i class="fas fa-bookmark fa-3x text-primary mb-3"></i>
+                        <h3 class="h5">오답 노트</h3>
+                        <p class="text-muted">틀린 단어들을 복습하고 실력을 향상시켜보세요.</p>
+                        <a href="{% url 'vocabulary:wrong_words' %}" class="btn btn-primary">
+                            <i class="fas fa-bookmark me-2"></i>오답 노트 보기
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                        <h3 class="h5">자주 틀리는 단어</h3>
+                        <p class="text-muted">틀린 횟수가 많은 단어들을 확인하고 집중적으로 학습하세요.</p>
+                        <a href="{% url 'vocabulary:difficult_words' %}" class="btn btn-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>자주 틀리는 단어 보기
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %} 

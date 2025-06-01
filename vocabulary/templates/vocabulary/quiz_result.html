@@ -1,67 +1,143 @@
 {% extends 'vocabulary/base.html' %}
 
-{% block title %}퀴즈 결과 - 영어 단어 학습{% endblock %}
+{% block title %}퀴즈 결과 - {{ quiz.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .score-circle {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto 20px;
+    }
+    
+    .score-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    
+    .score-label {
+        font-size: 1rem;
+        opacity: 0.8;
+    }
+    
+    .answer-card {
+        border: none;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        transition: transform 0.2s;
+    }
+    
+    .answer-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .answer-card.correct {
+        background-color: #d4edda;
+        border-left: 4px solid #28a745;
+    }
+    
+    .answer-card.incorrect {
+        background-color: #f8d7da;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .word-status {
+        font-size: 1.2rem;
+        margin-right: 10px;
+    }
+    
+    .word-status.correct {
+        color: #28a745;
+    }
+    
+    .word-status.incorrect {
+        color: #dc3545;
+    }
+    
+    .action-buttons {
+        margin-top: 30px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="text-center mb-0">{{ quiz.title }} - 결과</h3>
+    <div class="text-center mb-5">
+        <h1 class="display-4">{{ quiz.title }}</h1>
+        <p class="lead">퀴즈 결과</p>
+    </div>
+
+    <!-- 점수 표시 -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-6">
+            <div class="result-card p-4">
+                <div class="score-circle">
+                    <div class="score-value">{{ score }}%</div>
+                    <div class="score-label">정답률</div>
                 </div>
-                <div class="card-body">
-                    <div class="text-center mb-4">
-                        <h4>점수: {{ score }}점</h4>
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar {% if score >= 80 %}bg-success{% elif score >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
-                                 role="progressbar" 
-                                 style="width: {{ score }}%">
-                                {{ score }}%
-                            </div>
-                        </div>
-                    </div>
+                <div class="text-center">
+                    <p class="mb-0">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        맞은 문제: {{ correct_count }}개
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-times-circle text-danger me-2"></i>
+                        틀린 문제: {{ total_count|add:"-"|add:correct_count }}개
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>영어 단어</th>
-                                    <th>정답</th>
-                                    <th>제출한 답</th>
-                                    <th>결과</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for answer in answers %}
-                                <tr>
-                                    <td>{{ answer.word.english }}</td>
-                                    <td>{{ answer.word.korean }}</td>
-                                    <td>{{ answer.answer }}</td>
-                                    <td>
-                                        {% if answer.is_correct %}
-                                            <span class="badge bg-success">정답</span>
-                                        {% else %}
-                                            <span class="badge bg-danger">오답</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+    <!-- 답안 상세 -->
+    <h2 class="mb-4">답안 상세</h2>
+    <div class="row">
+        {% for answer in answers %}
+        <div class="col-md-6">
+            <div class="answer-card p-3 {% if answer.is_correct %}correct{% else %}incorrect{% endif %}">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas {% if answer.is_correct %}fa-check-circle text-success{% else %}fa-times-circle text-danger{% endif %} word-status"></i>
+                    <h3 class="h5 mb-0">{{ answer.word.english }}</h3>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <p class="mb-1 text-muted">정답:</p>
+                        <p class="mb-0">{{ answer.word.korean }}</p>
                     </div>
-
-                    <div class="d-grid gap-2 mt-4">
-                        <a href="{% url 'vocabulary:wrong_words' %}" class="btn btn-primary">
-                            오답 노트 보기
-                        </a>
-                        <a href="{% url 'vocabulary:take_quiz' %}" class="btn btn-outline-primary">
-                            다른 퀴즈 풀기
-                        </a>
+                    <div class="col-6">
+                        <p class="mb-1 text-muted">내 답안:</p>
+                        <p class="mb-0 {% if not answer.is_correct %}text-danger{% endif %}">
+                            {{ answer.user_answer }}
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
+        {% endfor %}
+    </div>
+
+    <!-- 하단 버튼 -->
+    <div class="text-center action-buttons">
+        <a href="{% url 'vocabulary:wrong_words' %}" class="btn btn-primary btn-lg me-3">
+            <i class="fas fa-bookmark me-2"></i>오답 노트 보기
+        </a>
+        <a href="{% url 'vocabulary:index' %}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-home me-2"></i>메인으로
+        </a>
     </div>
 </div>
 {% endblock %} 

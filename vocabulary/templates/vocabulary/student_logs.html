@@ -24,12 +24,58 @@
         padding: 5px 15px;
         border-radius: 20px;
     }
+
+    .quiz-selector {
+        margin-bottom: 20px;
+    }
+
+    .student-result-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .student-result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+    }
+
+    .progress {
+        height: 10px;
+    }
+
+    .word-result {
+        padding: 8px;
+        border-radius: 5px;
+        margin-bottom: 5px;
+    }
+
+    .word-result.correct {
+        background-color: #e8f5e9;
+    }
+
+    .word-result.incorrect {
+        background-color: #ffebee;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
     <h1 class="mb-4">학생 학습 로그</h1>
+
+    <!-- 퀴즈 선택기 -->
+    <div class="quiz-selector">
+        <select class="form-select" id="quizSelector" onchange="filterByQuiz(this.value)">
+            <option value="">모든 퀴즈</option>
+            {% for quiz in quiz_stats %}
+            <option value="{{ quiz.id }}">{{ quiz.title }} ({{ quiz.created_at|date:"Y-m-d" }})</option>
+            {% endfor %}
+        </select>
+    </div>
 
     <!-- 퀴즈별 통계 -->
     <div class="card mb-4">
@@ -45,24 +91,46 @@
                             <th>참여 학생 수</th>
                             <th>평균 정답률</th>
                             <th>생성일</th>
+                            <th>상세보기</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for quiz in quiz_stats %}
-                        <tr>
+                        <tr class="quiz-row" data-quiz-id="{{ quiz.id }}">
                             <td>{{ quiz.title }}</td>
                             <td>{{ quiz.total_students }}명</td>
-                            <td>{{ quiz.avg_score|floatformat:1 }}%</td>
+                            <td>
+                                <div class="progress">
+                                    <div class="progress-bar {% if quiz.avg_score >= 80 %}bg-success{% elif quiz.avg_score >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ quiz.avg_score|floatformat:1 }}%">
+                                        {{ quiz.avg_score|floatformat:1 }}%
+                                    </div>
+                                </div>
+                            </td>
                             <td>{{ quiz.created_at|date:"Y-m-d" }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="showQuizDetails({{ quiz.id }})">
+                                    상세보기
+                                </button>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="text-center">아직 퀴즈가 없습니다.</td>
+                            <td colspan="5" class="text-center">아직 퀴즈가 없습니다.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- 학생별 상세 결과 -->
+    <div id="quizDetails" style="display: none;">
+        <h3 class="mb-4">학생별 상세 결과</h3>
+        <div id="studentResults">
+            <!-- JavaScript로 동적으로 채워질 영역 -->
         </div>
     </div>
 
@@ -109,4 +177,59 @@
         </div>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+function filterByQuiz(quizId) {
+    if (!quizId) {
+        $('.quiz-row').show();
+        $('#quizDetails').hide();
+        return;
+    }
+    
+    $('.quiz-row').hide();
+    $(`.quiz-row[data-quiz-id="${quizId}"]`).show();
+    showQuizDetails(quizId);
+}
+
+function showQuizDetails(quizId) {
+    $('#quizDetails').show();
+    $('#studentResults').html('<div class="text-center"><div class="spinner-border" role="status"></div></div>');
+    
+    // AJAX 요청으로 학생별 상세 결과 가져오기
+    $.get(`/vocabulary/quiz/${quizId}/student-results/`, function(data) {
+        let html = '';
+        data.students.forEach(student => {
+            html += `
+                <div class="student-result-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">${student.username}</h4>
+                        <div class="score-badge ${student.score >= 80 ? 'bg-success' : student.score >= 60 ? 'bg-warning' : 'bg-danger'}">
+                            ${student.score}점
+                        </div>
+                    </div>
+                    <div class="progress mb-3">
+                        <div class="progress-bar ${student.score >= 80 ? 'bg-success' : student.score >= 60 ? 'bg-warning' : 'bg-danger'}" 
+                             role="progressbar" 
+                             style="width: ${student.score}%">
+                        </div>
+                    </div>
+                    <div class="word-results">
+                        ${student.answers.map(answer => `
+                            <div class="word-result ${answer.is_correct ? 'correct' : 'incorrect'}">
+                                <strong>${answer.word}</strong>: ${answer.answer}
+                                ${answer.is_correct ? 
+                                    '<span class="badge bg-success float-end">정답</span>' : 
+                                    '<span class="badge bg-danger float-end">오답</span>'}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        });
+        $('#studentResults').html(html);
+    });
+}
+</script>
+{% endblock %}
 {% endblock %} 

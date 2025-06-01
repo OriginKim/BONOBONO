@@ -1,0 +1,110 @@
+{% extends 'vocabulary/base.html' %}
+
+{% block title %}자주 틀리는 단어 - 영어 단어 학습{% endblock %}
+
+{% block extra_css %}
+<style>
+    .difficulty-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        transition: transform 0.2s;
+    }
+    
+    .difficulty-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .difficulty-header {
+        background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        padding: 15px;
+    }
+    
+    .word-card {
+        border: none;
+        border-radius: 10px;
+        background-color: #f8f9fa;
+        margin-bottom: 10px;
+        padding: 15px;
+    }
+    
+    .word-card:hover {
+        background-color: #e9ecef;
+    }
+    
+    .word-english {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #000DFF;
+    }
+    
+    .word-korean {
+        color: #666;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="text-center mb-5">
+        <h1 class="display-4">자주 틀리는 단어</h1>
+        <p class="lead">틀린 횟수가 많은 순서대로 정렬된 단어들입니다.</p>
+    </div>
+
+    <!-- 통계 카드 -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-6">
+            <div class="stats-card text-center">
+                <h3 class="mb-3">틀린 단어 통계</h3>
+                <div class="display-4 mb-2">{{ total_wrong_words }}</div>
+                <p class="mb-0">총 틀린 단어 수</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 틀린 횟수별 단어 목록 -->
+    {% for count, words in difficulty_groups %}
+    <div class="difficulty-card">
+        <div class="difficulty-header">
+            <h3 class="h5 mb-0">{{ count }}번 틀린 단어 ({{ words|length }}개)</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for word in words %}
+                <div class="col-md-6">
+                    <div class="word-card">
+                        <div class="word-english">{{ word.word.english }}</div>
+                        <div class="word-korean">{{ word.word.korean }}</div>
+                        <div class="text-muted mt-2">틀린 횟수: {{ word.wrong_count }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        아직 틀린 단어가 없습니다. 퀴즈를 풀어보세요!
+    </div>
+    {% endfor %}
+
+    <!-- 하단 버튼 -->
+    <div class="text-center mt-5">
+        <a href="{% url 'vocabulary:index' %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-home me-2"></i>메인으로
+        </a>
+    </div>
+</div>
+{% endblock %} 
