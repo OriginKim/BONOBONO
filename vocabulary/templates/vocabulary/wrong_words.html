@@ -2,45 +2,69 @@
 
 {% block title %}오답 노트 - 영어 단어 학습{% endblock %}
 
+{% block extra_css %}
+<style>
+    .wrong-table {
+        margin-top: 32px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .wrong-table th {
+        background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+        color: white;
+        font-weight: 600;
+        text-align: center;
+        font-size: 1.08rem;
+    }
+    .wrong-table td {
+        text-align: center;
+        vertical-align: middle;
+        font-size: 1.05rem;
+    }
+    .wrong-table tr:nth-child(even) {
+        background: #f8f9fa;
+    }
+    .wrong-table tr:hover {
+        background: #e9ecef;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="text-center">오답 노트</h3>
-            </div>
-            <div class="card-body">
-                {% if wrong_words %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>영어 단어</th>
-                                    <th>한글 뜻</th>
-                                    <th>틀린 횟수</th>
-                                    <th>마지막 틀린 날짜</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for word in wrong_words %}
-                                    <tr>
-                                        <td>{{ word.word.english }}</td>
-                                        <td>{{ word.word.korean }}</td>
-                                        <td>{{ word.wrong_count }}</td>
-                                        <td>{{ word.last_wrong_date|date:"Y-m-d H:i" }}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="text-center">
-                        <p class="lead">아직 틀린 단어가 없습니다.</p>
-                        <a href="{% url 'vocabulary:take_quiz' %}" class="btn btn-primary">퀴즈 풀기</a>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
+<div class="container mt-5">
+    <h2 class="mb-4">오답 노트</h2>
+    <div class="mb-4 text-end">
+        <a href="{% url 'vocabulary:review_wrong_words' %}" class="btn btn-warning btn-lg">
+            <i class="fas fa-redo-alt me-2"></i>오답 복습(원형 반복 학습)
+        </a>
     </div>
+    <p>총 오답 단어 수: <strong>{{ wrong_words|length }}</strong>개</p>
+    {% if wrong_words %}
+    <div class="table-responsive wrong-table">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>영어 단어</th>
+                    <th>한글 뜻</th>
+                    <th>틀린 횟수</th>
+                    <th>마지막 틀린 날짜</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wrong_word in wrong_words %}
+                <tr>
+                    <td><strong>{{ wrong_word.word.english }}</strong></td>
+                    <td>{{ wrong_word.word.korean }}</td>
+                    <td><span class="badge bg-danger">{{ wrong_word.wrong_count }}회</span></td>
+                    <td>{{ wrong_word.last_wrong_date|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="alert alert-info">아직 오답 단어가 없습니다.</div>
+    {% endif %}
 </div>
 {% endblock %} 

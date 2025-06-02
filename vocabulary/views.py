@@ -23,6 +23,8 @@ import traceback
 import openai
 import os
 from dotenv import load_dotenv
+from django.urls import reverse
+import ctypes
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -165,7 +167,9 @@ def create_quiz(request):
             active_until=active_until_dt
         )
         
-        # 선택된 단어들을 직접 QuizWord로 생성
+        # C 큐 생성 및 단어 enqueue
+        library = WordLearningLibrary()
+        queue = library.create_queue()
         for order, word_id in enumerate(word_ids, 1):
             word = Word.objects.get(id=word_id)
             QuizWord.objects.create(
@@ -173,7 +177,12 @@ def create_quiz(request):
                 word=word,
                 order=order
             )
-        
+            # C 큐에 단어 enqueue
+            try:
+                library.enqueue_word(queue, word.id)
+            except Exception as e:
+                logger.error(f"C 큐 enqueue 실패: {str(e)}")
+        # (여기서는 큐를 세션/DB에 저장하지 않음, 실제 사용은 take_quiz에서)
         messages.success(request, '퀴즈가 성공적으로 생성되었습니다.')
         return redirect('vocabulary:quiz_detail', quiz_id=quiz.id)
     
@@ -222,56 +231,83 @@ def take_quiz(request, quiz_id):
         return redirect('vocabulary:index')
     
     if request.method == 'POST':
-        # Stack을 사용하여 오답 저장
-        library = WordLearningLibrary()
-        stack = library.create_stack()
-        
-        quiz_words = QuizWord.objects.filter(quiz=quiz).select_related('word')
-        answers = []
-        correct_count = 0
-        total_count = 0
-        
-        for quiz_word in quiz_words:
-            answer = request.POST.get(f'answer_{quiz_word.word.id}')
-            is_correct = answer.lower() == quiz_word.word.korean.lower()
-            
-            StudentAnswer.objects.create(
-                student=request.user,
-                quiz=quiz,
-                word=quiz_word.word,
-                answer=answer,
-                is_correct=is_correct
-            )
-            
-            if not is_correct:
-                WrongWord.objects.get_or_create(student=request.user, word=quiz_word.word)
-            
-            answers.append({
-                'word': quiz_word.word,
-                'user_answer': answer,
-                'is_correct': is_correct
+        try:
+            library = WordLearningLibrary()
+            stack = None
+            try:
+                stack = library.create_stack()
+            except Exception as e:
+                logger.error(f"Stack creation failed: {str(e)}")
+            # C 큐 생성 및 퀴즈 단어 enqueue
+            queue = library.create_queue()
+            quiz_words = QuizWord.objects.filter(quiz=quiz).select_related('word').order_by('order')
+            for quiz_word in quiz_words:
+                try:
+                    library.enqueue_word(queue, quiz_word.word.id)
+                except Exception as e:
+                    logger.error(f"C 큐 enqueue 실패(응시): {str(e)}")
+            answers = []
+            correct_count = 0
+            total_count = 0
+            # C 큐에서 dequeue로 단어를 꺼내 문제 출제
+            for _ in range(len(quiz_words)):
+                word_info = library.dequeue_word(queue)
+                if not word_info:
+                    continue
+                word_id = None
+                # DB에서 word_id 찾기
+                for qw in quiz_words:
+                    if qw.word.english == word_info['english'] and qw.word.korean == word_info['korean']:
+                        word_id = qw.word.id
+                        break
+                if word_id is None:
+                    continue
+                answer = request.POST.get(f'answer_{word_id}', '').strip()
+                is_correct = answer.lower() == word_info['korean'].lower()
+                StudentAnswer.objects.create(
+                    student=request.user,
+                    quiz=quiz,
+                    word_id=word_id,
+                    answer=answer,
+                    is_correct=is_correct
+                )
+                if not is_correct:
+                    wrong_word_obj, created = WrongWord.objects.get_or_create(student=request.user, word_id=word_id)
+                    if not created:
+                        wrong_word_obj.wrong_count += 1
+                        wrong_word_obj.save()
+                    if stack:
+                        try:
+                            library.push_word(stack, word_id)
+                        except Exception as e:
+                            logger.error(f"Stack push failed: {str(e)}")
+                answers.append({
+                    'word': word_info,
+                    'user_answer': answer,
+                    'is_correct': is_correct
+                })
+                total_count += 1
+                if is_correct:
+                    correct_count += 1
+            score = (correct_count / total_count) * 100 if total_count > 0 else 0
+            return render(request, 'vocabulary/quiz_result.html', {
+                'quiz': quiz,
+                'answers': answers,
+                'score': round(score, 1),
+                'correct_count': correct_count,
+                'total_count': total_count
             })
-            
-            total_count += 1
-            if is_correct:
-                correct_count += 1
-        
-        score = (correct_count / total_count) * 100 if total_count > 0 else 0
-        
-        return render(request, 'vocabulary/quiz_result.html', {
-            'quiz': quiz,
-            'answers': answers,
-            'score': round(score, 1),
-            'correct_count': correct_count,
-            'total_count': total_count
-        })
+        except Exception as e:
+            logger.error(f"Quiz submission error: {str(e)}")
+            messages.error(request, '퀴즈 제출 중 오류가 발생했습니다. 다시 시도해주세요.')
+            return redirect('vocabulary:take_quiz', quiz_id=quiz_id)
     
     # 퀴즈의 단어들을 순서대로 가져옵니다
     quiz_words = QuizWord.objects.filter(quiz=quiz).select_related('word').order_by('order')
     
     context = {
         'quiz': quiz,
-        'words': quiz_words  # QuizWord 객체 전체를 전달
+        'words': quiz_words
     }
     return render(request, 'vocabulary/take_quiz.html', context)
 
@@ -279,25 +315,75 @@ def take_quiz(request, quiz_id):
 def wrong_words(request):
     if request.user.is_staff:
         return redirect('vocabulary:index')
-    
-    wrong_words = WrongWord.objects.filter(student=request.user)
+    # 가장 최근에 틀린 단어가 맨 위에 오도록 정렬
+    wrong_words = WrongWord.objects.filter(student=request.user).order_by('-last_wrong_date')
     return render(request, 'vocabulary/wrong_words.html', {'wrong_words': wrong_words})
+
+def get_current_index(library, circular_list):
+    total_count = library.get_circular_list_size(circular_list)
+    if total_count == 0:
+        return 0, 0
+    # head로 이동
+    library.lib.moveToHead(circular_list)
+    index = 1
+    for _ in range(total_count):
+        word_struct = library.lib.getCurrentWord(circular_list)
+        # current가 가리키는 노드와 같으면 break
+        if word_struct.word == library.lib.getCurrentWord(circular_list).word and \
+           word_struct.meaning == library.lib.getCurrentWord(circular_list).meaning:
+            break
+        library.lib.moveToNext(circular_list)
+        index += 1
+    return index, total_count
 
 @login_required
 def review_wrong_words(request):
     if request.user.is_staff:
         return redirect('vocabulary:index')
-    
-    # 원형 연결 리스트를 사용하여 오답 단어 복습
-    library = WordLearningLibrary()
-    circular_list = library.create_circular_list()
-    
-    wrong_words = WrongWord.objects.filter(student=request.user)
-    for wrong_word in wrong_words:
-        word = wrong_word.word
-        library.lib.insertWord(circular_list, word.english.encode('utf-8'), word.korean.encode('utf-8'))
-    
-    return render(request, 'vocabulary/review_wrong_words.html', {'wrong_words': wrong_words})
+    try:
+        library = WordLearningLibrary()
+        stack = library.create_stack()
+        wrong_words = WrongWord.objects.filter(student=request.user).order_by('-last_wrong_date')
+        # 스택에 단어 추가
+        for wrong_word in wrong_words:
+            library.push_word(stack, wrong_word.word.id)
+        # 원형 리스트 생성 및 단어 추가
+        circular_list = library.create_circular_list()
+        if not circular_list:
+            messages.error(request, '오답 복습을 시작할 수 없습니다.')
+            return redirect('vocabulary:wrong_words')
+        for _ in range(len(wrong_words)):
+            word_info = library.pop_word(stack)
+            if word_info:
+                library.insert_word_to_list(circular_list, word_info['english'], word_info['korean'])
+        # 세션에 circular_list 포인터 저장
+        request.session['circular_list_ptr'] = str(int(circular_list))
+        # 현재 단어 가져오기
+        current_word_struct = library.lib.getCurrentWord(circular_list)
+        if not current_word_struct.word:
+            messages.error(request, '원형 리스트에 단어가 없습니다.')
+            return redirect('vocabulary:wrong_words')
+        try:
+            current_word = {
+                "english": current_word_struct.word.decode("utf-8"),
+                "korean": current_word_struct.meaning.decode("utf-8")
+            }
+        except Exception as e:
+            logger.error(f"getCurrentWord 포인터 접근 에러: {e}")
+            messages.error(request, '단어 정보를 불러오는 데 실패했습니다.')
+            return redirect('vocabulary:wrong_words')
+        # 인덱스 계산 추가
+        index, total_count = get_current_index(library, circular_list)
+        return render(request, 'vocabulary/review_wrong_words.html', {
+            'current_word': current_word,
+            'has_words': len(wrong_words) > 0,
+            'current_index': index,
+            'total_count': total_count
+        })
+    except Exception as e:
+        logger.error(f"Error in review_wrong_words: {str(e)}")
+        messages.error(request, '오답 복습 중 오류가 발생했습니다.')
+        return redirect('vocabulary:wrong_words')
 
 def stats_view(request):
     if not request.user.is_authenticated:
@@ -426,62 +512,24 @@ def quiz_student_results(request, quiz_id):
 def difficult_words(request):
     if request.user.is_staff:
         return redirect('vocabulary:index')
-    
     try:
-        print("자주 틀리는 단어 페이지 접속 시작")
-        
-        # 학생이 틀린 단어들을 가져와서 틀린 횟수 계산
+        # 학생이 틀린 단어들을 가져와서 틀린 횟수별로 그룹화
         wrong_words = WrongWord.objects.filter(student=request.user)
-        print(f"틀린 단어 수: {wrong_words.count()}")
-        
-        # 틀린 횟수 계산
-        mistake_counts = {}
-        for wrong_word in wrong_words:
-            english = wrong_word.word.english
-            if english not in mistake_counts:
-                mistake_counts[english] = 0
-            mistake_counts[english] += 1
-        
-        # 단어들을 리스트로 변환
-        words = []
-        for wrong_word in wrong_words:
-            word_dict = {
-                'word': {
-                    'english': wrong_word.word.english,
-                    'korean': wrong_word.word.korean
-                },
-                'wrong_count': mistake_counts[wrong_word.word.english]
-            }
-            # 중복 제거
-            if word_dict not in words:
-                words.append(word_dict)
-        
-        print(f"총 단어 수: {len(words)}")
-        
-        # 틀린 횟수별로 그룹화
         difficulty_groups = {}
-        for word in words:
-            count = word['wrong_count']
+        for wrong_word in wrong_words:
+            count = wrong_word.wrong_count
             if count not in difficulty_groups:
                 difficulty_groups[count] = []
-            if word not in difficulty_groups[count]:
-                difficulty_groups[count].append(word)
-        
+            difficulty_groups[count].append(wrong_word)
         # 틀린 횟수가 많은 순서대로 정렬
         sorted_groups = sorted(difficulty_groups.items(), reverse=True)
-        print(f"그룹화된 단어 수: {len(sorted_groups)}")
-        print("그룹화된 데이터:", sorted_groups)
-        
         context = {
-            'difficulty_groups': sorted_groups,
-            'total_wrong_words': len(words)
+            'sorted_groups': sorted_groups,
+            'total_wrong_words': wrong_words.count()
         }
-        
-        print("페이지 렌더링 시작")
         return render(request, 'vocabulary/difficult_words.html', context)
-        
     except Exception as e:
-        traceback.print_exc()  # 콘솔에 에러 전체 출력
+        traceback.print_exc()
         messages.error(request, f'오류가 발생했습니다: {str(e)}')
         return redirect('vocabulary:index')
 
@@ -518,3 +566,64 @@ def generate_association(request):
         import traceback
         traceback.print_exc(file=sys.stdout)
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+def delete_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id, created_by=request.user)
+    if request.method == 'POST':
+        quiz.delete()
+        messages.success(request, '퀴즈가 삭제되었습니다.')
+        return redirect('vocabulary:index')
+    return render(request, 'vocabulary/confirm_delete.html', {'quiz': quiz})
+
+@login_required
+@require_POST
+def api_next_wrong_word(request):
+    try:
+        library = WordLearningLibrary()
+        circular_list_ptr = request.session.get('circular_list_ptr')
+        if not circular_list_ptr:
+            return JsonResponse({'success': False, 'error': '복습 세션이 만료되었습니다. 페이지를 새로고침 해주세요.'})
+        circular_list = ctypes.c_void_p(int(circular_list_ptr))
+        library.lib.moveToNext(circular_list)
+        word = library.lib.getCurrentWord(circular_list)
+        # 인덱스 계산
+        index, total_count = get_current_index(library, circular_list)
+        if word.word:
+            return JsonResponse({
+                'success': True,
+                'english': word.word.decode('utf-8'),
+                'korean': word.meaning.decode('utf-8'),
+                'current_index': index,
+                'total_count': total_count
+            })
+        return JsonResponse({'success': False, 'error': '단어를 불러올 수 없습니다.'})
+    except Exception as e:
+        logger.error(f"Error in api_next_wrong_word: {str(e)}")
+        return JsonResponse({'success': False, 'error': '오류가 발생했습니다.'})
+
+@login_required
+@require_POST
+def api_prev_wrong_word(request):
+    try:
+        library = WordLearningLibrary()
+        circular_list_ptr = request.session.get('circular_list_ptr')
+        if not circular_list_ptr:
+            return JsonResponse({'success': False, 'error': '복습 세션이 만료되었습니다. 페이지를 새로고침 해주세요.'})
+        circular_list = ctypes.c_void_p(int(circular_list_ptr))
+        library.lib.moveToPrevious(circular_list)
+        word = library.lib.getCurrentWord(circular_list)
+        # 인덱스 계산
+        index, total_count = get_current_index(library, circular_list)
+        if word.word:
+            return JsonResponse({
+                'success': True,
+                'english': word.word.decode('utf-8'),
+                'korean': word.meaning.decode('utf-8'),
+                'current_index': index,
+                'total_count': total_count
+            })
+        return JsonResponse({'success': False, 'error': '단어를 불러올 수 없습니다.'})
+    except Exception as e:
+        logger.error(f"Error in api_prev_wrong_word: {str(e)}")
+        return JsonResponse({'success': False, 'error': '오류가 발생했습니다.'})

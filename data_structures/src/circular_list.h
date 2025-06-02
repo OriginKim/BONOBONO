@@ -38,4 +38,7 @@ int getListSize(CircularList* list);
 // 리스트 비우기
 void clearList(CircularList* list);
 
+// 헤드로 이동
+void moveToHead(CircularList* list);
+
 #endif 

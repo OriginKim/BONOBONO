@@ -1,10 +1,10 @@
 CC = gcc
-CFLAGS = -fPIC -Wall -Wextra
+CFLAGS = -fPIC -Wall -Wextra -fvisibility=default
 LDFLAGS = -shared
 
-SRCS = queue.c stack.c circular_list.c
+SRCS = stack.c queue.c circular_list.c
 OBJS = $(SRCS:.c=.o)
-TARGET = libword_learning.so
+TARGET = libword.so
 
 all: $(TARGET)
 

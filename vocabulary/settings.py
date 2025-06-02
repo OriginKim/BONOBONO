@@ -10,7 +10,8 @@ C_LIBRARY_PATH = os.path.join(BASE_DIR, 'data_structures', 'src', 'libword_learn
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'vocabulary' / 'static',
-] 
+]
+STATIC_ROOT = os.path.join(str(BASE_DIR), 'staticfiles')
 
 # 로깅 설정
 LOGGING = {

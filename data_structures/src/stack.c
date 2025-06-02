@@ -1,11 +1,15 @@
 #include "stack.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>  // malloc 포함
 
-void initStack(Stack *s) {
-    s->top = -1;
+Stack* initStack() {
+    Stack* s = (Stack*)malloc(sizeof(Stack));
+    if (s != NULL) {
+        s->top = -1;
+    }
+    return s;
 }
-
 int isStackEmpty(Stack *s) {
     return s->top == -1;
 }

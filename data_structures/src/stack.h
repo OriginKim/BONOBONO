@@ -14,7 +14,8 @@ typedef struct {
 } Stack;
 
 // Stack 초기화
-void initStack(Stack *s);
+Stack* initStack();
+
 
 // Stack이 비어있는지 확인
 int isStackEmpty(Stack *s);
