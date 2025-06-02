@@ -71,6 +71,8 @@ class WordLearningLibrary:
             self.lib.clearList.argtypes = [c_void_p]
             self.lib.moveToHead.argtypes = [ctypes.c_void_p]
             self.lib.moveToHead.restype = None
+            self.lib.getCurrentIndex.argtypes = [ctypes.c_void_p]
+            self.lib.getCurrentIndex.restype = ctypes.c_int
 
         except Exception as e:
             logger.error(f"Error initializing WordLearningLibrary: {str(e)}")

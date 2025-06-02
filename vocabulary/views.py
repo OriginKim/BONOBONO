@@ -372,8 +372,9 @@ def review_wrong_words(request):
             logger.error(f"getCurrentWord 포인터 접근 에러: {e}")
             messages.error(request, '단어 정보를 불러오는 데 실패했습니다.')
             return redirect('vocabulary:wrong_words')
-        # 인덱스 계산 추가
-        index, total_count = get_current_index(library, circular_list)
+        # 인덱스 계산 (C 함수 직접 호출)
+        index = library.lib.getCurrentIndex(circular_list)
+        total_count = library.get_circular_list_size(circular_list)
         return render(request, 'vocabulary/review_wrong_words.html', {
             'current_word': current_word,
             'has_words': len(wrong_words) > 0,
@@ -587,8 +588,9 @@ def api_next_wrong_word(request):
         circular_list = ctypes.c_void_p(int(circular_list_ptr))
         library.lib.moveToNext(circular_list)
         word = library.lib.getCurrentWord(circular_list)
-        # 인덱스 계산
-        index, total_count = get_current_index(library, circular_list)
+        # 인덱스 계산 (C 함수 직접 호출)
+        index = library.lib.getCurrentIndex(circular_list)
+        total_count = library.get_circular_list_size(circular_list)
         if word.word:
             return JsonResponse({
                 'success': True,
@@ -613,8 +615,9 @@ def api_prev_wrong_word(request):
         circular_list = ctypes.c_void_p(int(circular_list_ptr))
         library.lib.moveToPrevious(circular_list)
         word = library.lib.getCurrentWord(circular_list)
-        # 인덱스 계산
-        index, total_count = get_current_index(library, circular_list)
+        # 인덱스 계산 (C 함수 직접 호출)
+        index = library.lib.getCurrentIndex(circular_list)
+        total_count = library.get_circular_list_size(circular_list)
         if word.word:
             return JsonResponse({
                 'success': True,

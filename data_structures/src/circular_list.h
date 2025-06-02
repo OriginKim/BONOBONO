@@ -41,4 +41,7 @@ void clearList(CircularList* list);
 // 헤드로 이동
 void moveToHead(CircularList* list);
 
+// 현재 current가 리스트에서 몇 번째인지 반환
+int getCurrentIndex(CircularList* list);
+
 #endif 

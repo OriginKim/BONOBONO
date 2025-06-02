@@ -147,3 +147,15 @@ void moveToHead(CircularList* list) {
         list->current = list->head;
     }
 }
+
+int getCurrentIndex(CircularList* list) {
+    if (!list || !list->head || !list->current) return 0;
+    Node* temp = list->head;
+    int idx = 1;
+    while (temp != list->current) {
+        temp = temp->next;
+        idx++;
+        if (temp == list->head) break; // 무한루프 방지
+    }
+    return idx;
+}
