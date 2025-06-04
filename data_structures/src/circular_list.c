@@ -67,19 +67,31 @@ Word getCurrentWord(CircularList* list) {
 }
 
 void moveToNext(CircularList* list) {
-    printf("[DEBUG] moveToNext 진입: list=%p, current=%p, head=%p, size=%d\n", list, list->current, list->head, list->size);
-    if (list->current != NULL) {
-        if (list->current->next == NULL) {
-            printf("[DEBUG] moveToNext: current->next is NULL! (포인터 깨짐)\n");
-            return;
-        }
-        printf("[DEBUG] moveToNext: current=%p, current->next=%p\n", list->current, list->current->next);
-        list->current = list->current->next;
-        printf("[DEBUG] moveToNext 후: current=%p, current->word=%s\n", list->current, list->current->data.word);
-    } else {
-        printf("[DEBUG] moveToNext: current is NULL\n");
+    printf("\n==============================================\n");
+    printf("[DEBUG] moveToNext 진입: list=%p, current=%p, head=%p, size=%d\n", 
+           (void*)list, (void*)list->current, (void*)list->head, list->size);
+
+    if (list == NULL || list->current == NULL) {
+        printf("[DEBUG] moveToNext: list 또는 current가 NULL입니다.\n");
+        return;
+    }
+
+    if (list->current->next == NULL) {
+        printf("[ERROR] moveToNext: current->next가 NULL입니다. 리스트가 손상됨!\n");
+        return;
+    }
+
+    Node* prev = list->current;
+    list->current = list->current->next;
+
+    printf("[DEBUG] moveToNext: 이전 current=%p -> 이동 후 current=%p\n", (void*)prev, (void*)list->current);
+    printf("[DEBUG] moveToNext: current->word=%s\n", list->current->data.word);
+
+    if (list->current == list->head) {
+        printf("[DEBUG] 🔁 회전 발생: current가 head로 돌아옴\n");
     }
 }
+
 
 void moveToPrevious(CircularList* list) {
     printf("[DEBUG] moveToPrevious 진입: list=%p, current=%p, head=%p, size=%d\n", list, list->current, list->head, list->size);
@@ -104,7 +116,7 @@ void moveToPrevious(CircularList* list) {
 }
 
 int getListSize(CircularList* list) {
-    printf("[DEBUG] getListSize: list=%p, size=%d\n", list, list->size);
+    printf("[DEBUG] getListSize: list=%p, size=%d\n\n", list, list->size);
     return list->size;
 }
 

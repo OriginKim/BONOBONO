@@ -27,6 +27,11 @@ class WordLearningLibrary:
             self.lib = ctypes.CDLL(lib_path)
             logger.info("C library loaded successfully")
 
+            # self.lib.getQueueFront.argtypes = [c_void_p]
+            # self.lib.getQueueFront.restype = c_int
+            # self.lib.getQueueRear.argtypes = [c_void_p]
+            # self.lib.getQueueRear.restype = c_int
+
             # Queue 함수 설정
             self.lib.createQueue.restype = c_void_p
             self.lib.initQueue.argtypes = [c_void_p]
@@ -105,6 +110,8 @@ class WordLearningLibrary:
                 logger.error("Queue is full")
                 return -1
             logger.info(f"Word enqueued to queue successfully: {db_word.english}")
+            logger.info("\n" + "="*50 + "\n")  # 깔끔한 구분선
+
             return result
         except DjangoWord.DoesNotExist:
             logger.error(f"enqueue_word error: Word with ID {word_id} not found")
@@ -124,8 +131,11 @@ class WordLearningLibrary:
                     'english': word.word.decode('utf-8').strip(),
                     'korean': word.meaning.decode('utf-8').strip()
                 }
-                logger.info(f"Word dequeued from queue: {result['english']}")
+                logger.info(f"Word dequeued form queue: {result['english']}")
+                logger.info("\n" + "="*50 + "\n")
                 return result
+                
+                
             logger.warning("Empty word returned from dequeue")
             return None
         except Exception as e:
@@ -159,6 +169,7 @@ class WordLearningLibrary:
                 logger.error("Stack is full")
                 return -1
             logger.info(f"Word pushed to stack successfully: {db_word.english}")
+            logger.info("\n" + "="*50 + "\n")
             return result
         except DjangoWord.DoesNotExist:
             logger.error(f"push_word error: Word with ID {word_id} not found")
@@ -179,6 +190,7 @@ class WordLearningLibrary:
                     'korean': word.meaning.decode('utf-8').strip()
                 }
                 logger.info(f"Word popped from stack: {result['english']}")
+                logger.info("\n" + "="*50 + "\n")
                 return result
             logger.warning("Empty word returned from pop")
             return None
@@ -218,10 +230,13 @@ class WordLearningLibrary:
             word.meaning = korean.encode('utf-8')
             self.lib.insertWord(circular_list, word)
             logger.info(f"Word inserted to circular list successfully: {english}")
+            logger.info("\n" + "="*50 + "\n")
         except Exception as e:
             logger.error(f"Error inserting word to circular list: {str(e)}")
             raise
 
     def get_circular_list_size(self, circular_list_ptr):
         return self.lib.getListSize(circular_list_ptr)
+    
+   
 

@@ -27,4 +27,5 @@ urlpatterns = [
     path('api/association/', views.generate_association, name='generate_association'),
     path('api/next_wrong_word/', views.api_next_wrong_word, name='api_next_wrong_word'),
     path('api/prev_wrong_word/', views.api_prev_wrong_word, name='api_prev_wrong_word'),
+    path('api/debug-enqueue-word/', views.debug_enqueue_word, name='debug_enqueue_word'),
 ] 

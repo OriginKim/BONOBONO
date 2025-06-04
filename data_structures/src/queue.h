@@ -33,6 +33,9 @@ Word dequeue(Queue *q);
 // Queue의 현재 크기 반환
 int getQueueSize(Queue *q);
 
+// Queue 생성
 Queue* createQueue(void);
+
+
 
 #endif 

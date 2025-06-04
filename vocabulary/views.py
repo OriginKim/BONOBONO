@@ -18,7 +18,7 @@ from django.views.decorators.http import require_POST
 from django.conf import settings
 import json
 from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
+#import torch
 import traceback
 import openai
 import os
@@ -131,10 +131,16 @@ def create_quiz(request):
         title = request.POST.get('title')
         description = request.POST.get('description')
         word_ids = request.POST.getlist('words')
-        time_limit = int(request.POST.get('time_limit', 60))
         active_from = request.POST.get('active_from')
         active_until = request.POST.get('active_until')
         
+        # time_limit을 정수로 변환하고 예외 처리
+        try:
+            time_limit = int(request.POST.get('time_limit'))
+        except (ValueError, TypeError):
+            messages.error(request, '시간 제한은 숫자로 입력해주세요.')
+            return redirect('vocabulary:create_quiz')
+
         if not word_ids:
             messages.error(request, '최소 하나 이상의 단어를 선택해주세요.')
             return redirect('vocabulary:create_quiz')
@@ -162,9 +168,9 @@ def create_quiz(request):
             title=title,
             description=description,
             created_by=request.user,
-            time_limit=time_limit,
             active_from=active_from_dt,
-            active_until=active_until_dt
+            active_until=active_until_dt,
+            time_limit=time_limit  # 시간 제한 저장
         )
         
         # C 큐 생성 및 단어 enqueue
@@ -290,12 +296,14 @@ def take_quiz(request, quiz_id):
                 if is_correct:
                     correct_count += 1
             score = (correct_count / total_count) * 100 if total_count > 0 else 0
+            wrong_count = total_count - correct_count  # 틀린 문제 수 계산
             return render(request, 'vocabulary/quiz_result.html', {
                 'quiz': quiz,
                 'answers': answers,
                 'score': round(score, 1),
                 'correct_count': correct_count,
-                'total_count': total_count
+                'total_count': total_count,
+                'wrong_count': wrong_count  # 틀린 문제 수 추가
             })
         except Exception as e:
             logger.error(f"Quiz submission error: {str(e)}")
@@ -303,11 +311,12 @@ def take_quiz(request, quiz_id):
             return redirect('vocabulary:take_quiz', quiz_id=quiz_id)
     
     # 퀴즈의 단어들을 순서대로 가져옵니다
-    quiz_words = QuizWord.objects.filter(quiz=quiz).select_related('word').order_by('order')
+    words = QuizWord.objects.filter(quiz=quiz).select_related('word')
     
     context = {
         'quiz': quiz,
-        'words': quiz_words
+        'words': words,
+        'time_limit': quiz.time_limit  # 시간 제한을 템플릿에 전달
     }
     return render(request, 'vocabulary/take_quiz.html', context)
 
@@ -630,3 +639,31 @@ def api_prev_wrong_word(request):
     except Exception as e:
         logger.error(f"Error in api_prev_wrong_word: {str(e)}")
         return JsonResponse({'success': False, 'error': '오류가 발생했습니다.'})
+
+@login_required
+@require_POST
+def debug_enqueue_word(request):
+    try:
+        word_id = request.POST.get('word_id')
+        if not word_id:
+            return JsonResponse({'success': False, 'error': '단어 ID가 필요합니다.'})
+        
+        word = Word.objects.get(id=word_id)
+        library = WordLearningLibrary()
+        queue = library.create_queue()
+        
+        # C 큐에 단어 enqueue (디버그 메시지 출력)
+        try:
+            library.enqueue_word(queue, word.id)
+            return JsonResponse({
+                'success': True,
+                'message': f'단어 "{word.english}" enqueue 성공'
+            })
+        except Exception as e:
+            logger.error(f"C 큐 enqueue 실패: {str(e)}")
+            return JsonResponse({'success': False, 'error': str(e)})
+            
+    except Word.DoesNotExist:
+        return JsonResponse({'success': False, 'error': '단어를 찾을 수 없습니다.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

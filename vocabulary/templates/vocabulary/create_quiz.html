@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 선택된 단어 표시
+    // 선택된 단어 표시 및 디버그 API 호출
     function updateSelectedWords() {
         const selected = Array.from(wordCheckboxes)
             .filter(cb => cb.checked)
@@ -161,6 +161,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 <strong>${word.english}</strong> - ${word.korean}
             </div>
         `).join('');
+
+        // 새로 선택된 단어에 대해 디버그 API 호출
+        const newlySelected = selected.filter(word => 
+            !Array.from(selectedWords.querySelectorAll('.selected-word-item'))
+                .some(item => item.textContent.includes(word.english))
+        );
+
+        newlySelected.forEach(word => {
+            fetch('/vocabulary/api/debug-enqueue-word/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: `word_id=${word.id}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(data.message);  // 브라우저 콘솔에도 메시지 출력
+                } else {
+                    console.error('Error:', data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
     }
 
     // 체크박스 변경 이벤트

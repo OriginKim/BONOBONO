@@ -68,14 +68,14 @@
     <h1 class="mb-4">학생 학습 로그</h1>
 
     <!-- 퀴즈 선택기 -->
-    <div class="quiz-selector">
+    <!-- <div class="quiz-selector">
         <select class="form-select" id="quizSelector" onchange="filterByQuiz(this.value)">
             <option value="">모든 퀴즈</option>
             {% for quiz in quiz_stats %}
             <option value="{{ quiz.id }}">{{ quiz.title }} ({{ quiz.created_at|date:"Y-m-d" }})</option>
             {% endfor %}
         </select>
-    </div>
+    </div> -->
 
     <!-- 퀴즈별 통계 -->
     <div class="card mb-4">
@@ -91,7 +91,7 @@
                             <th>참여 학생 수</th>
                             <th>평균 정답률</th>
                             <th>생성일</th>
-                            <th>상세보기</th>
+                            <!-- <th>상세보기</th> -->
                         </tr>
                     </thead>
                     <tbody>
@@ -109,11 +109,11 @@
                                 </div>
                             </td>
                             <td>{{ quiz.created_at|date:"Y-m-d" }}</td>
-                            <td>
+                            <!-- <td>
                                 <button class="btn btn-sm btn-outline-primary" onclick="showQuizDetails({{ quiz.id }})">
                                     상세보기
                                 </button>
-                            </td>
+                            </td> -->
                         </tr>
                         {% empty %}
                         <tr>

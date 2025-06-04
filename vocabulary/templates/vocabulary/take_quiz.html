@@ -127,7 +127,7 @@
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0">{{ quiz.title }}</h3>
-                    <div class="timer" id="timer">남은 시간: <span id="time">60</span>초</div>
+                    <div class="timer" id="timer">남은 시간: <span id="time">{{ time_limit }}</span>초</div>
                 </div>
                 <div class="progress mt-2">
                     <div class="progress-bar" role="progressbar" style="width: 0%" id="progress-bar"></div>
@@ -180,106 +180,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    let currentWordIndex = 1;  // 0에서 1로 변경
-    const words = document.querySelectorAll('.word-card');
-    const totalWords = words.length;
-    let timeLeft = {{ quiz.time_limit }};
-    let timerInterval;
-    
-    // 타이머 시작
-    function startTimer() {
-        const timerDisplay = document.getElementById('timer');
-        timerInterval = setInterval(() => {
-            timeLeft--;
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                document.getElementById('quiz-form').submit();
-            }
-        }, 1000);
-    }
-
-    // 단어 발음 함수
-    window.speakWord = function(word) {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(word);
-            utterance.lang = 'en-US';
-            speechSynthesis.speak(utterance);
-        } else {
-            alert('이 브라우저는 음성 합성을 지원하지 않습니다.');
-        }
-    }
-
-    // 단어 카드 표시 함수
-    function showWord(index) {
-        // 모든 단어 카드 숨기기
-        const wordCards = document.querySelectorAll('.word-card');
-        wordCards.forEach(card => {
-            card.style.display = 'none';
-            card.classList.remove('active');
-        });
-        
-        // 현재 단어 카드 표시
-        const currentCard = document.getElementById('word-' + index);
-        if (currentCard) {
-            currentCard.style.display = 'block';
-            currentCard.classList.add('active');
-        }
-        
-        // 네비게이션 버튼 상태 업데이트
-        const navButtons = document.querySelectorAll('.word-number-btn');
-        navButtons.forEach(btn => {
-            btn.classList.remove('current');
-            if (!btn.classList.contains('answered')) {
-                btn.classList.remove('not-answered');
-            }
-        });
-        
-        const currentNav = document.getElementById('nav-' + index);
-        if (currentNav) {
-            currentNav.classList.add('current');
-        }
-        
-        currentWordIndex = index;
-    }
-
-    // 이전 단어로 이동
-    window.previousWord = function() {
-        if (currentWordIndex > 1) {
-            showWord(currentWordIndex - 1);
-        }
-    }
-
-    // 다음 단어로 이동
-    window.nextWord = function() {
-        if (currentWordIndex < totalWords) {
-            showWord(currentWordIndex + 1);
-        }
-    }
-
-    // 특정 단어로 이동
-    window.goToWord = function(index) {
-        if (index >= 1 && index <= totalWords) {
-            showWord(index);
-        }
-    }
-
-    // 답변 표시 함수
-    window.markAsAnswered = function(index) {
-        const navButton = document.getElementById('nav-' + index);
-        if (navButton) {
-            navButton.classList.add('answered');
-            navButton.classList.remove('not-answered');
-        }
-    }
-
-    // 타이머 시작
-    startTimer();
-});
-</script>
+<script src="/static/vocabulary/js/quiz.js"></script>
 {% endblock %} 
